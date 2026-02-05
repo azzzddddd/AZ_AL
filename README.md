@@ -10,7 +10,24 @@
 ## 构建
 * 使用Release压缩包里的.exe一键修改
 * 以前就在用的可以单独把lib里的对应.so文件放到对应文件夹, 达到直接更新(3.3及以下版本暂不支持)
+* 升级新版本之前建议备份一下旧版本，我只会轻微测试一次就发布
+
+## 更新日志
+### 3.4
+* 优化了换装功能，3.4将可以在秘书舰以及收藏界面换装，收藏图鉴界面换装会解锁对应的皮肤语音预览。
+* 优化心情屏蔽功能，屏蔽弹窗。
+* 新添加了秒杀延时功能，以秒为单位。
+* 新添加了EX和Meta协助信标的保护，当启用时，无法出击。
+* 将文件名修改成Elaina.json了，注意一下。
+* 优化了Elaina.json的生成逻辑。
+* 移除了bool RemoveBuffs = false; bool RemoveEquipment = false; bool RemoveSkill = false;
+
+### 3.4.1
+* 修复EX保护和Meta保护在当Aircraft、Enemies、Misc和Skins同时为true的时候会启用拦截的问题。
+* 移除心情值固定150的问题，优化屏蔽心情值代码。
+* 修复活动出击闪退的问题。
 
 ## 感谢
 * [Egoistically/Perseus](https://github.com/Egoistically/Perseus)
 * [4pii4/PiePerseus](https://github.com/4pii4/PiePerseus)
+
