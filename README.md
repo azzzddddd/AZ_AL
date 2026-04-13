@@ -15,7 +15,7 @@
 ## 各渠道服安装包官方下载地址
 
 ⚠️⚠️⚠️ 注意！！！
-- **OPPO**和**4399**渠道服请自行下载安装包
+- **OPPO**和**4399**渠道服请自行用手机下载安装包，并传输到电脑
 
 <div align="center" style="margin: 10px 0;">
   <a href="https://game.bilibili.com/blhx"><img src="images/bilibili.svg" width="32" style="margin: 0 5px;"></a>
