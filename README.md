@@ -29,7 +29,6 @@
   <a href="https://game.mlinkapp.com/game/detail/3162763?contentId=3162763"><img src="images/meizu.svg" width="32" style="margin: 0 5px;"></a>
 </div>
 
----
 ## 更新日志
 ### 3.4
 * 优化了换装功能，3.4将可以在秘书舰以及收藏界面换装，收藏图鉴界面换装会解锁对应的皮肤语音预览。
