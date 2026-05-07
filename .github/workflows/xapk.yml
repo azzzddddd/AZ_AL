@@ -1,10 +1,10 @@
-name: Elaina XAPK Auto Build
+name: XAPK AzurLane JMBQ Build Work
 
 on:
   workflow_dispatch:
     inputs:
       region:
-        description: '选择游戏区服 (Select Game Server)'
+        description: 'Select Game Server'
         required: true
         type: choice
         options:
@@ -25,22 +25,20 @@ jobs:
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
-          distribution: "temurin"
+          java-version: "18"
+          distribution: "adopt"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
       - name: Install build-tools
         run: |
-          yes | sdkmanager --install "build-tools;34.0.0"
-          sudo apt-get update && sudo apt-get install -y jq
+          yes | sdkmanager --install "build-tools;35.0.0"
       
-      - name: Build Elaina Patched XAPK
+      - name: Build APK
         run: |
           chmod +x merge_build.sh
           ./merge_build.sh "${{ github.event.inputs.region }}"
-
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
