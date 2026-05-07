@@ -33,6 +33,10 @@
   <a href="https://game.mlinkapp.com/game/detail/3162763?contentId=3162763"><img src="images/meizu.svg" width="32" style="margin: 0 5px;"></a>
 </div>
 
+## 预览
+<img width="1296" height="769" alt="MuMuNxDevice_MoR2AVyFGX" src="https://github.com/user-attachments/assets/24ec6d06-6e11-4ab8-93f2-56b8de53e4a9" />
+<img width="1296" height="769" alt="MuMuNxDevice_MGJ11O6uzD" src="https://github.com/user-attachments/assets/d9da0b0d-f7bf-4308-8bda-ded662bf8775" />
+
 ## Elaina 配置文件说明 (Elaina.json)
 
 > **声明**：由@伊蕾娜/@Elaina构建，本资源完全免费禁止盗卖。如有闪退，请将`Elaina.json`删除后重启游戏。
@@ -120,6 +124,7 @@
 | `EXProtection` | `false` | EX关卡防封/保护 |
 | `MetaProtection` | `false` | Meta战防封/保护 |
 
+---
 ## 更新日志
 ### 3.4
 * 优化了换装功能，3.4将可以在秘书舰以及收藏界面换装，收藏图鉴界面换装会解锁对应的皮肤语音预览。
