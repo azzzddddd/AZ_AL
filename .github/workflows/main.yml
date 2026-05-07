@@ -6,7 +6,7 @@ on:
         description: '应用名称 (必须是英文，例如 xiaomi)'
         required: true
         type: string
-        default: 'Game'
+        default: ''
       download_url:
         description: 'APK 直链下载地址'
         required: true
@@ -37,8 +37,8 @@ jobs:
       
       - name: Run Patch Script
         run: |
-          chmod +x elaina_build.sh
-          ./elaina_build.sh "${{ github.event.inputs.app_name }}" "${{ github.event.inputs.download_url }}"
+          chmod +x merge_build.sh
+          ./merge_build.sh "${{ github.event.inputs.app_name }}" "${{ github.event.inputs.download_url }}"
 
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
