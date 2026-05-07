@@ -398,13 +398,14 @@ CREATE_SPLIT_ARCHIVES() {
     echo "分卷压缩完成: ${GAME_SERVER}-V.${GAME_VERSION}.7z"
 }
 
-# 获取ELAINA补丁版本号
-OWNER="elaina-al"
-REPO="AL"
-echo "正在获取补丁版本号(Tag)..."
-local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
-local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
-
+# 获取 ELAINA 补丁版本
+PATCH_VERSIONS() {
+    local OWNER="elaina-al"
+    local REPO="AL"
+    echo "正在获取补丁版本号(Tag)..."
+    local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
+    local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
+}
 # 打印Logo
 PRINT_LOGO() {
     cat << "EOF"
@@ -439,6 +440,7 @@ main() {
         DECODE_APK
         DELETE_ORGINAL_APK
         PATCH_APK
+        PATCH_VERSIONS
         BUILD_APK
         OPTIMIZE_AND_SIGN_APK
         GET_GAME_VERSION
@@ -451,6 +453,7 @@ main() {
         DECODE_APK
         DELETE_ORGINAL_APK
         PATCH_APK
+        PATCH_VERSIONS
         BUILD_APK
         OPTIMIZE_AND_SIGN_APK
         GET_GAME_VERSION
