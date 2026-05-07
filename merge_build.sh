@@ -207,41 +207,41 @@ DELETE_ORGINAL_APK() {
     rm -rf "${APK_TO_DELETE}"
 }
 
-# 7. 核心逻辑：注入 Elaina 补丁
+# 注入 Elaina 补丁
 PATCH_APK() {
     echo "INFO: 正在合入 Elaina 补丁..."
     
     # 注入 .so 库文件
     if [ -d "libs" ]; then
-        echo "INFO: 正在复制动态库文件到 lib 目录..."
+        echo "正在复制动态库文件到 lib 目录..."
         mkdir -p DECODE_Output/lib/
         cp -r libs/* DECODE_Output/lib/
     else
-        echo "ERROR: 仓库中未找到 libs 文件夹"
+        echo "仓库中未找到 libs 文件夹"
         exit 1
     fi
 
     # 定位并修改 Smali 代码
     local SMALI_FILE=$(find DECODE_Output -type f -name "UnityPlayerActivity.smali" | head -n 1)
     if [ -z "${SMALI_FILE}" ]; then
-        echo "ERROR: 未找到 UnityPlayerActivity.smali"
+        echo "未找到 UnityPlayerActivity.smali"
         exit 1
     fi
-    echo "INFO: 正在修改: ${SMALI_FILE}"
+    echo "修改: ${SMALI_FILE}"
 
-    # 注入 native init 声明
+    # 注入 native init 
     sed -i '/# direct methods/a \
-.method private static native init(Landroid/content/Context;)V\n.end method\n' "$SMALI_FILE"
+    .method private static native init(Landroid/content/Context;)V\n.end method\n' "$SMALI_FILE"
 
     # 在 onCreate 方法中注入加载库和初始化逻辑
-    # 匹配 .method ... onCreate(Landroid/os/Bundle;)V
     sed -i '/\.method.*onCreate(Landroid\/os\/Bundle;)V/a \
     const-string v0, "Elaina"\n\
     invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V\n\
     invoke-static {p0}, Lcom/unity3d/player/UnityPlayerActivity;->init(Landroid/content/Context;)V' "$SMALI_FILE"
 
-    echo "INFO: Smali 代码注入完成"
+    echo "Smali 代码注入完成"
 }
+
 # 打包APK
 BUILD_APK() {
     local OUTPUT_APK
@@ -397,6 +397,13 @@ CREATE_SPLIT_ARCHIVES() {
     }
     echo "分卷压缩完成: ${GAME_SERVER}-V.${GAME_VERSION}.7z"
 }
+
+# 获取ELAINA补丁版本号
+OWNER="elaina-al"
+REPO="AL"
+echo "正在获取补丁版本号(Tag)..."
+local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
+local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
 
 # 打印Logo
 PRINT_LOGO() {
