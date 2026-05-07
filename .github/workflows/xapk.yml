@@ -43,8 +43,8 @@ jobs:
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
-          tag: "${{ env.Elaina_VERSION }}-XAPK"
-          name: "AzurLane Elaina ${{ env.Elaina_VERSION }} Build XAPK"
+          tag: "${{ env.ELAINA_VERSION }}-XAPK"
+          name: "AzurLane Elaina ${{ env.ELAINA_VERSION }} Build XAPK"
           artifacts: "${{ github.event.inputs.region }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           body: |
