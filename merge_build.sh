@@ -1,6 +1,3 @@
-#!/bin/bash
-# Elaina 自动化注入与重打包脚本
-
 BUILD_TOOLS_DIR=$(find ${ANDROID_HOME}/build-tools -maxdepth 1 -type d | sort -V | tail -n 1)
 AAPT_PATH="${BUILD_TOOLS_DIR}/aapt"
 DOWNLOAD_DIR="."
