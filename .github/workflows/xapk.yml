@@ -1,4 +1,4 @@
-name: XAPK AzurLane JMBQ Build Work
+name: XAPK AzurLane Elaina Build Work
 
 on:
   workflow_dispatch:
