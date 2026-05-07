@@ -50,8 +50,8 @@ jobs:
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
-          tag: "${{ env.Elaina_VERSION }}-APK"
-          name: "AzurLane Elaina ${{ env.Elaina_VERSION }} Build APK"
+          tag: "${{ env.ELAINA_VERSION }}-APK"
+          name: "AzurLane Elaina ${{ env.ELAINA_VERSION }} Build APK"
           artifacts: "${{ github.event.inputs.server_name }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           body: |
