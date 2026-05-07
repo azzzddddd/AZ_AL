@@ -405,7 +405,7 @@ PATCH_VERSIONS() {
     
     echo "正在获取补丁版本号(Tag)..."
     local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
-    local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
+    local GET_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
     
     echo "ELAINA_VERSION=${GET_VERSION}" >> "${GITHUB_ENV}"
     echo "成功获取补丁版本: ${GET_VERSION}
