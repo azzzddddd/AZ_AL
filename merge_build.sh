@@ -501,7 +501,6 @@ main() {
         SET_BUNDLE_ID
         DOWNLOAD_APKEEP
         DOWNLOAD_APKTOOL
-        DOWNLOAD_MOD_MENU
         DOWNLOAD_APK
         DELETE_ORGINAL_XAPK
         VERIFY_APK
@@ -515,7 +514,6 @@ main() {
     else
         # APK构建流程
         DOWNLOAD_APKTOOL
-        DOWNLOAD_MOD_MENU
         DOWNLOAD_APK
         VERIFY_APK
         DECODE_APK
