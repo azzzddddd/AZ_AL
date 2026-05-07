@@ -206,41 +206,33 @@ DELETE_ORGINAL_APK() {
     rm -rf "${APK_TO_DELETE}"
 }
 
-# 注入 Elaina 核心库和修改 smali 代码
-PATCH_APK() {
-    echo "💉 开始注入 Elaina 补丁..."
-    
-    # 1. 复制 .so 动态库到 lib 目录
-    if [ -d "libs" ]; then
-        echo "   复制 .so 依赖库..."
-        mkdir -p DECODE_Output/lib
-        cp -r libs/* DECODE_Output/lib/
-    else
-        echo "❌ 未在仓库中找到 libs 文件夹，请上传 Elaina 的依赖库！"
-        exit 1
-    fi
+# 5. 注入 Elaina 核心库和 smali 逻辑
+echo "开始注入 Elaina 补丁..."
+if [ -d "libs" ]; then
+    mkdir -p DECODE_Output/lib
+    cp -r libs/* DECODE_Output/lib/
+else
+    echo "严重错误：未在仓库中找到 libs 文件夹！"
+    exit 1
+fi
 
-    # 2. 寻找 UnityPlayerActivity.smali
-    SMALI_FILE=$(find DECODE_Output -type f -name "UnityPlayerActivity.smali" | head -n 1)
-    if [ -z "${SMALI_FILE}" ]; then
-        echo "❌ 未找到 UnityPlayerActivity.smali"
-        exit 1
-    fi
-    echo "   找到目标文件: ${SMALI_FILE}"
+SMALI_FILE=$(find DECODE_Output -type f -name "UnityPlayerActivity.smali" | head -n 1)
+if [ -z "${SMALI_FILE}" ]; then
+    echo "严重错误：未找到 UnityPlayerActivity.smali"
+    exit 1
+fi
 
-    # 3. 使用 sed 注入代码 
-    # 注入 native 声明
-    sed -i '/# direct methods/a \
+# 注入 native init 声明
+sed -i '/# direct methods/a \
 .method private static native init(Landroid/content/Context;)V\n.end method\n' "$SMALI_FILE"
 
-    # 在 onCreate 方法中注入 loadLibrary 逻辑
-    sed -i '/\.method.*onCreate(Landroid\/os\/Bundle;)V/a \
+# 在 onCreate 中注入 loadLibrary 调用
+sed -i '/\.method.*onCreate(Landroid\/os\/Bundle;)V/a \
     const-string v0, "Elaina"\n\
     invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V\n\
     invoke-static {p0}, Lcom/unity3d/player/UnityPlayerActivity;->init(Landroid/content/Context;)V' "$SMALI_FILE"
 
-    echo "✅ Smali 代码注入完成！"
-}
+echo "Smali 代码注入完成！"
 
 # 打包APK
 BUILD_APK() {
