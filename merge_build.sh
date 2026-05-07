@@ -114,6 +114,91 @@ DOWNLOAD_APKTOOL() {
         exit 1
     fi
 }
+
+# 下载 Mod Patch 文件并解压
+DOWNLOAD_MOD_MENU() {
+    local OWNER="JMBQ"
+    local REPO="azurlane"
+    local FILENAME="MOD_MENU.rar"
+
+    echo "正在下载MOD补丁..."
+    local API_OLD_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/3.2.0")
+    local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
+    local JMBQ_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
+
+    # 修改：查找name中含有.rar的文件，而不是直接使用第一个assets
+    local DOWNLOAD_OLD_LINK=$(echo "${API_OLD_RESPONSE}" | jq -r '.assets[] | select(.name | contains(".rar")) | .browser_download_url' | head -n 1)
+    if [ -z "${DOWNLOAD_OLD_LINK}" ] || [ "${DOWNLOAD_OLD_LINK}" == "null" ]; then
+        # 修改：查找name中含有.zip的文件，避免后缀不一致导致的无法获取链接
+        local FILENAME="MOD_MENU.zip"
+        local DOWNLOAD_OLD_LINK=$(echo "${API_OLD_RESPONSE}" | jq -r '.assets[] | select(.name | contains(".zip")) | .browser_download_url' | head -n 1)
+        if [ -z "${DOWNLOAD_OLD_LINK}" ] || [ "${DOWNLOAD_OLD_LINK}" == "null" ]; then
+            echo "无法获取MOD Patch文件下载链接"
+            exit 1
+        fi
+    fi
+
+    curl -L -o "${DOWNLOAD_DIR}/${FILENAME}" "${DOWNLOAD_OLD_LINK}"
+    if [ $? -eq 0 ]; then
+        echo "旧版补丁下载成功！文件保存至：${DOWNLOAD_DIR}/${FILENAME}"
+    else
+        echo "旧版补丁下载失败，请重试"
+        exit 1
+    fi
+
+    if command -v 7z &> /dev/null; then
+        7z x -y "${DOWNLOAD_DIR}/${FILENAME}" -o"${DOWNLOAD_DIR}/JMBQ"
+    else
+        echo "错误: 未找到7z工具，无法解压！"
+        exit 1
+    fi
+    
+    if [ $? -ne 0 ]; then
+        echo "错误: 解压 ${FILENAME} 失败！"
+        exit 1
+    fi
+
+    echo "正在下载MOD补丁..."
+    # 恢复原命名防止逻辑报错
+    FILENAME="MOD_MENU.rar"
+    # 修改：查找name中含有.rar的文件，而不是直接使用第一个assets
+    local DOWNLOAD_LINK=$(echo "${API_RESPONSE}" | jq -r '.assets[] | select(.name | contains(".rar")) | .browser_download_url' | head -n 1)
+
+    if [ -z "${DOWNLOAD_LINK}" ] || [ "${DOWNLOAD_LINK}" == "null" ]; then
+        # 修改：查找name中含有.zip的文件，避免后缀不一致导致的无法获取链接
+        local FILENAME="MOD_MENU.zip"
+        local DOWNLOAD_LINK=$(echo "${API_RESPONSE}" | jq -r '.assets[] | select(.name | contains(".zip")) | .browser_download_url' | head -n 1)
+        if [ -z "${DOWNLOAD_LINK}" ] || [ "${DOWNLOAD_LINK}" == "null" ]; then
+            echo "无法获取MOD Patch文件下载链接"
+            exit 1
+        fi
+    fi
+
+    curl -L -o "${DOWNLOAD_DIR}/${FILENAME}" "${DOWNLOAD_LINK}"
+    if [ $? -eq 0 ]; then
+        echo "补丁下载成功！文件保存至：${DOWNLOAD_DIR}/${FILENAME}"
+    else
+        echo "补丁下载失败，请重试"
+        exit 1
+    fi
+
+    if command -v 7z &> /dev/null; then
+        7z x -y "${DOWNLOAD_DIR}/${FILENAME}" -o"${DOWNLOAD_DIR}/JMBQ/assets/arch"
+    else
+        echo "错误: 未找到7z工具，无法解压！"
+        exit 1
+    fi
+    
+    if [ $? -ne 0 ]; then
+        echo "错误: 解压 ${FILENAME} 失败！"
+        exit 1
+    fi
+    echo "JMBQ目录内容:"  
+    ls -la "${DOWNLOAD_DIR}/JMBQ" 2>/dev/null || echo "无法列出目录内容"
+
+    echo "JMBQ_VERSION=${JMBQ_VERSION}" >> "${GITHUB_ENV}"
+}
+
 # 下载APK（通用函数，根据构建类型执行不同的下载逻辑）
 DOWNLOAD_APK() {
     if [ "${BUILD_TYPE}" = "XAPK" ]; then
@@ -206,107 +291,69 @@ DELETE_ORGINAL_APK() {
     rm -rf "${APK_TO_DELETE}"
 }
 
-# 5. 注入 Elaina 核心库和 smali 逻辑
-echo "开始注入 Elaina 补丁..."
-if [ -d "libs" ]; then
-    mkdir -p DECODE_Output/lib
-    cp -r libs/* DECODE_Output/lib/
-else
-    echo "严重错误：未在仓库中找到 libs 文件夹！"
-    exit 1
-fi
-
-SMALI_FILE=$(find DECODE_Output -type f -name "UnityPlayerActivity.smali" | head -n 1)
-if [ -z "${SMALI_FILE}" ]; then
-    echo "严重错误：未找到 UnityPlayerActivity.smali"
-    exit 1
-fi
-
-# 注入 native init 声明
-sed -i '/# direct methods/a \
-.method private static native init(Landroid/content/Context;)V\n.end method\n' "$SMALI_FILE"
-
-# 在 onCreate 中注入 loadLibrary 调用
-sed -i '/\.method.*onCreate(Landroid\/os\/Bundle;)V/a \
-    const-string v0, "Elaina"\n\
-    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V\n\
-    invoke-static {p0}, Lcom/unity3d/player/UnityPlayerActivity;->init(Landroid/content/Context;)V' "$SMALI_FILE"
-
-echo "Smali 代码注入完成！"
-
-# 打包APK
-BUILD_APK() {
-    local OUTPUT_APK
-    if [ "${BUILD_TYPE}" = "XAPK" ]; then
-        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
-    else
-        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
-    fi
-    
-    echo "正在重新构建已打补丁的 APK 文件: ${OUTPUT_APK}"
-    java -jar "${DOWNLOAD_DIR}/apktool.jar" b -f "${DOWNLOAD_DIR}/DECODE_Output" -o "${OUTPUT_APK}"
+# 合入MOD
+PATCH_APK() {
+    echo "正在合入MOD补丁..."
+    cp -r "${DOWNLOAD_DIR}/JMBQ/assets/." "${DOWNLOAD_DIR}/DECODE_Output/assets/"
     if [ $? -ne 0 ]; then
-        echo "错误: APK 构建失败！"
+        echo "错误: 复制资源文件失败！"
         exit 1
     fi
-    echo "APK 构建成功"
-}
+    echo "复制资源文件完成"
 
-# 优化并签名APK
-OPTIMIZE_AND_SIGN_APK() {
-    export PATH=${PATH}:${BUILD_TOOLS_DIR}
-    local KEY_DIR="${DOWNLOAD_DIR}/key/"
-    local PRIVATE_KEY="${KEY_DIR}testkey.pk8"
-    local CERTIFICATE="${KEY_DIR}testkey.x509.pem"
-    local INPUT_APK
-    local UNSIGNED_APK
-    local FINAL_APK
+    local MAX_CLASS_NUM=$(find "${DOWNLOAD_DIR}/DECODE_Output/" -maxdepth 1 -type d -name "smali_classes*" 2>/dev/null | sed 's/.*smali_classes//' | sort -n | tail -1)
+    MAX_CLASS_NUM=${MAX_CLASS_NUM:-3}
+    local NEW_CLASS_NUM=$((MAX_CLASS_NUM + 1))
+    local NEW_SMALI_DIR="smali_classes${NEW_CLASS_NUM}"
     
-    if [ "${BUILD_TYPE}" = "XAPK" ]; then
-        INPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
-        UNSIGNED_APK="${GAME_BUNDLE_ID}.unsigned.apk"
-    else
-        INPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
-        UNSIGNED_APK="${GAME_SERVER}.unsigned.apk"
+    # 移除maxdepth限制，确保能找到所有smali_classes目录
+    local SRC_DIR=$(find "${DOWNLOAD_DIR}/JMBQ" -type d -name "smali_classes*" 2>/dev/null | head -1)
+
+    if [ -z "${SRC_DIR}" ]; then
+        # 添加详细的错误信息，显示JMBQ目录结构
+        echo "错误: MOD 补丁目录中未找到 smali_classes 目录！"
+        echo "JMBQ目录内容:"  
+        ls -la "${DOWNLOAD_DIR}/JMBQ" 2>/dev/null || echo "无法列出目录内容"
+        exit 1
     fi
     
-    local OUTPUT_APK="${DOWNLOAD_DIR}/${UNSIGNED_APK}"
-    local FINAL_APK="${INPUT_APK}"
+    echo "找到MOD补丁目录: ${SRC_DIR}"
+    cp -r "${SRC_DIR}" "${DOWNLOAD_DIR}/DECODE_Output/${NEW_SMALI_DIR}" || {
+        echo "错误: 复制 smali 文件失败！"
+        exit 1
+    }
+    echo "smali文件复制完成"
 
-    if [ ! -f "${INPUT_APK}" ]; then
-        echo "错误：找不到输入APK文件: ${INPUT_APK}"
+    local SMALI_FILE=$(find "${DOWNLOAD_DIR}/DECODE_Output" -type f -name "UnityPlayerActivity.smali")
+    if [ -z "${SMALI_FILE}" ]; then
+        echo "错误: UnityPlayerActivity.smali 文件未找到！"
         exit 1
     fi
+    echo "已找到 UnityPlayerActivity.smali 文件，路径为: ${SMALI_FILE}"
 
-    if [ ! -f "${PRIVATE_KEY}" ] || [ ! -f "${CERTIFICATE}" ]; then
-        echo "错误：找不到签名密钥文件"
-        echo "请确保以下文件存在："
-        echo "  - ${PRIVATE_KEY}"
-        echo "  - ${CERTIFICATE}"
+    local LINE_NUM=$(grep -n ".method public constructor <init>()V" "${SMALI_FILE}" | cut -d: -f1)
+    [ -z "${LINE_NUM}" ] && {
+        echo "未找到构造函数"
         exit 1
-    else
-        echo "已找到签名密钥："
-        echo "  - ${PRIVATE_KEY}"
-        echo "  - ${CERTIFICATE}"
-    fi
+    }
 
-    echo "正在优化APK..."
-    if zipalign -f 4 "${INPUT_APK}" "${OUTPUT_APK}"; then
-        echo "优化成功"
-        rm "${INPUT_APK}"
-
-        echo "正在签名APK..."
-        if apksigner sign --key "${PRIVATE_KEY}" --cert "${CERTIFICATE}" "${OUTPUT_APK}"; then
-            echo "签名成功"
-            mv "${OUTPUT_APK}" "${FINAL_APK}"
-        else
-            echo "签名失败"
-            exit 1
-        fi
-    else
-        echo "优化失败"
+    echo "正在修改 ${SMALI_FILE} 文件..."
+    sed -i -e "/\.method public constructor <init>()V/,/\.end method/{" \
+           -e "/\.locals 0/a\    invoke-static {}, Lcom/android/support/Main;->Start()V" \
+           -e "}" "${SMALI_FILE}" || {
+        echo "错误：添加smali代码失败，请检查文件路径、权限或文件内容格式。"
         exit 1
-    fi
+    }
+    echo "smali代码添加成功！"
+
+    echo "正在修改 AndroidManifest.xml 文件..."
+    local MANIFEST_FILE="${DOWNLOAD_DIR}/DECODE_Output/AndroidManifest.xml"
+    sed -i 's#</application>#    <service android:name="com.android.support.Launcher" android:enabled="true" android:exported="false" android:stopWithTask="true"/>\n    </application>\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>#' "${MANIFEST_FILE}" || {
+        echo "错误：修改 AndroidManifest.xml 文件失败，请检查文件路径、权限或文件内容格式。"
+        exit 1
+    }
+    echo "修改成功！"
+    echo "补丁完成。"
 }
 
 # 打包APK
@@ -487,12 +534,13 @@ main() {
     PRINT_LOGO
     CHECK_PARAM
     
-# 根据构建类型执行不同的流程
+    # 根据构建类型执行不同的流程
     if [ "${BUILD_TYPE}" = "XAPK" ]; then
         # XAPK构建流程
         SET_BUNDLE_ID
         DOWNLOAD_APKEEP
         DOWNLOAD_APKTOOL
+        DOWNLOAD_MOD_MENU
         DOWNLOAD_APK
         DELETE_ORGINAL_XAPK
         VERIFY_APK
@@ -506,6 +554,7 @@ main() {
     else
         # APK构建流程
         DOWNLOAD_APKTOOL
+        DOWNLOAD_MOD_MENU
         DOWNLOAD_APK
         VERIFY_APK
         DECODE_APK
