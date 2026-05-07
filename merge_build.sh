@@ -402,9 +402,13 @@ CREATE_SPLIT_ARCHIVES() {
 PATCH_VERSIONS() {
     local OWNER="elaina-al"
     local REPO="AL"
+    
     echo "正在获取补丁版本号(Tag)..."
     local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
     local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
+    
+    echo "ELAINA_VERSION=${GET_VERSION}" >> "${GITHUB_ENV}"
+    echo "成功获取补丁版本: ${GET_VERSION}
 }
 
 # 打印Logo
