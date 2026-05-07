@@ -33,6 +33,93 @@
   <a href="https://game.mlinkapp.com/game/detail/3162763?contentId=3162763"><img src="images/meizu.svg" width="32" style="margin: 0 5px;"></a>
 </div>
 
+## Elaina 配置文件说明 (Elaina.json)
+
+> **声明**：由@伊蕾娜/@Elaina构建，本资源完全免费禁止盗卖。如有闪退，请将`Elaina.json`删除后重启游戏。
+> 
+> **版本**：3.4.1
+> 
+> **项目地址**：[https://github.com/elaina-al/AL](https://github.com/elaina-al/AL)
+
+### ✈️ 双方飞机 (Aircraft)
+| 字段 (Field) | 默认值 (Default) | 说明 (Description) |
+| :--- | :--- | :--- |
+| `Enabled` | `false` | 功能总开关 (true=开, false=关) |
+| `Accuracy` | `-1` | 命中率 |
+| `AccuracyGrowth` | `-1` | 命中率成长值 |
+| `AttackPower` | `-1` | 攻击力 |
+| `AttackPowerGrowth` | `-1` | 攻击力成长值 |
+| `CrashDamage` | `-1` | 碰撞伤害 |
+| `Hp` | `-1` | 生命值 |
+| `HpGrowth` | `-1` | 生命成长值 |
+| `Speed` | `-1` | 航速 |
+
+### 👾 敌方数据 (Enemies)
+| 字段 (Field) | 默认值 (Default) | 说明 (Description) |
+| :--- | :--- | :--- |
+| `Enabled` | `false` | 功能总开关 (true=开, false=关) |
+| `AntiAir` | `-1` | 防空 |
+| `AntiAirGrowth` | `-1` | 防空成长值 |
+| `AntiSubmarine` | `-1` | 反潜 |
+| `Armor` | `-1` | 装甲 |
+| `ArmorGrowth` | `-1` | 装甲成长值 |
+| `Cannon` | `-1` | 炮击 |
+| `CannonGrowth` | `-1` | 炮击成长值 |
+| `Evasion` | `-1` | 机动 |
+| `EvasionGrowth` | `-1` | 机动成长值 |
+| `Hit` | `-1` | 命中 |
+| `HitGrowth` | `-1` | 命中成长值 |
+| `Hp` | `-1` | 生命值 |
+| `HpGrowth` | `-1` | 生命成长值 |
+| `Luck` | `-1` | 幸运值 |
+| `LuckGrowth` | `-1` | 幸运成长值 |
+| `Reload` | `-1` | 装填 |
+| `ReloadGrowth` | `-1` | 装填成长值 |
+| `Speed` | `-1` | 航速 |
+| `SpeedGrowth` | `-1` | 航速成长值 |
+| `Torpedo` | `-1` | 雷击 |
+| `TorpedoGrowth` | `-1` | 雷击成长值 |
+| `InstakillOnSpawn` | `false` | 敌方舰船生成即死 |
+| `InstakillOnSpawnDelay`| `-1.0` | 敌方舰船生成即死延迟 (秒) |
+
+### 🛡️ 己方数据 (Friendlies)
+| 字段 (Field) | 默认值 (Default) | 说明 (Description) |
+| :--- | :--- | :--- |
+| `Enabled` | `false` | 功能总开关 (true=开, false=关) |
+| `HpMultiplier` | `1.0` | 己方血量倍数 |
+| `Damage` | `-1` | 武器伤害 |
+| `ReloadMax` | `-1` | 最大装填时间 |
+
+### 🎭 自慰/伪装功能 (Spoof)
+> *注：自慰功能仅限本地客户端显示，其他人无法看到。*
+
+| 字段 (Field) | 默认值 (Default) | 说明 (Description) |
+| :--- | :--- | :--- |
+| `Enabled` | `false` | 功能总开关 (true=开, false=关) |
+| `Name` | `""` | 指挥官昵称 |
+| `Id` | `""` | UID |
+| `Lv` | `0` | 指挥官等级 |
+
+### ⚙️ 杂项功能 (Misc)
+| 字段 (Field) | 默认值 (Default) | 说明 (Description) |
+| :--- | :--- | :--- |
+| `Enabled` | `false` | 功能总开关 (true=开, false=关) |
+| `ExerciseGodmode` | `false` | 演习无敌 |
+| `FastStageMovement` | `false` | 快速移动 |
+| `Skins` | `false` | 解锁全皮肤 |
+| `AutoRepeatLimit` | `-1` | 连续作战次数 (自律次数) |
+| `ChatCommands` | `false` | 聊天框命令 |
+| `RemoveBBAnimation` | `false` | 移除舰船开炮动画 |
+| `RemoveAwakenAnimation`| `false` | 移除觉醒动画 |
+| `RemoveMoraleWarning` | `false` | 移除心情过低警告 |
+| `RemoveHardModeStatLimit`| `false` | 移除困难属性限制 |
+| `RemoveNSFWArts` | `false` | 移除不适合在公共场合展示的图像 (和谐图) |
+| `AllBlueprintsConvertible`| `false` | 科研，所有图纸都可以转换 |
+| `OathAll` | `false` | 全舰船誓约 |
+| `UnlockUI` | `false` | 解锁全部战斗主题UI和头像框 |
+| `EXProtection` | `false` | EX关卡防封/保护 |
+| `MetaProtection` | `false` | Meta战防封/保护 |
+
 ## 更新日志
 ### 3.4
 * 优化了换装功能，3.4将可以在秘书舰以及收藏界面换装，收藏图鉴界面换装会解锁对应的皮肤语音预览。
