@@ -38,8 +38,8 @@ jobs:
       
       - name: Build Elaina Patched XAPK
         run: |
-          chmod +x elaina_build_xapk.sh
-          ./elaina_build_xapk.sh "${{ github.event.inputs.region }}"
+          chmod +x merge_build.sh
+          ./merge_build.sh "${{ github.event.inputs.region }}"
 
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
