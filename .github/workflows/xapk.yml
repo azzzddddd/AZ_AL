@@ -1,1 +1,61 @@
+name: Elaina XAPK Auto Build
 
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: '选择游戏区服 (Select Game Server)'
+        required: true
+        type: choice
+        options:
+          - 'TW'
+          - 'EN'
+          - 'JP'
+          - 'KR'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install build-tools
+        run: |
+          yes | sdkmanager --install "build-tools;34.0.0"
+          sudo apt-get update && sudo apt-get install -y jq
+      
+      - name: Build Elaina Patched XAPK
+        run: |
+          chmod +x elaina_build_xapk.sh
+          ./elaina_build_xapk.sh "${{ github.event.inputs.region }}"
+
+      - name: Release and Upload Assets
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "${{ github.event.inputs.region }}-Elaina-Patched"
+          name: "AzurLane Elaina Patched XAPK - ${{ github.event.inputs.region }}"
+          artifacts: "${{ github.event.inputs.region }}-Elaina.7z.*"
+          allowUpdates: true
+          body: |
+            ### Elaina XAPK 自动注入构建完成
+            * **区服**: ${{ github.event.inputs.region }}
+            * **补丁核心**: Elaina Libs
+            
+            <details>
+              <summary>安装说明 (点击展开)</summary>
+                1. 下载所有以 `7z.00*` 结尾的分卷文件。<br>
+                2. 将它们放在同一目录下，使用解压软件解压 `7z.001` 文件即可得到 `.xapk`。<br>
+                3. 使用支持 XAPK 的安装器进行安装。
+            </details>
