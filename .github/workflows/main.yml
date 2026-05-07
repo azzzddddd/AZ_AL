@@ -1,16 +1,17 @@
-name: Elaina Auto Patcher
+name: APK AzurLane JMBQ Build Work
 on:
   workflow_dispatch:
     inputs:
-      app_name:
-        description: '应用名称 (必须是英文，例如 xiaomi)'
+      server_name:
+        description: '区服名称-必须（必须是英文字母！例如 Bilibili，台服和外服请使用XAPK AzurLane JMBQ Build Work）'
         required: true
         type: string
         default: ''
       download_url:
-        description: 'APK 直链下载地址'
+        description: 'APK下载链接（只能填入直链，最好使用国外云盘的直链，例如Google云盘）'
         required: true
         type: string
+        default: ''
 
 jobs:
   build:
@@ -19,42 +20,51 @@ jobs:
       contents: write
 
     steps:
+      # 步骤1：检出仓库代码
       - name: Checkout code
         uses: actions/checkout@v4
       
+      # 步骤2：设置 Java JDK
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          java-version: "17"
-          distribution: "temurin"
+          java-version: "18"
+          distribution: "adopt"
 
+      # 步骤3：设置 Android SDK
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      # 步骤4：安装 build-tools
       - name: Install build-tools
         run: |
-          yes | sdkmanager --install "build-tools;34.0.0"
+          yes | sdkmanager --install "build-tools;35.0.0"
       
-      - name: Run Patch Script
+      # 步骤5：执行构建流程
+      - name: Build APK
         run: |
           chmod +x merge_build.sh
-          ./merge_build.sh "${{ github.event.inputs.app_name }}" "${{ github.event.inputs.download_url }}"
+          ./merge_build.sh "${{ github.event.inputs.server_name }}" "${{ github.event.inputs.download_url }}"
 
+      # 步骤6：创建 Release 并上传所有分卷文件
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
-          tag: "${{ github.event.inputs.app_name }}-Patched"
-          name: "${{ github.event.inputs.app_name }} Patched Release"
-          artifacts: "*.7z.*"
+          tag: "${{ env.JMBQ_VERSION }}-APK"
+          name: "AzurLane JMBQ ${{ env.JMBQ_VERSION }} Build APK"
+          artifacts: "${{ github.event.inputs.server_name }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           body: |
-            ### 自动注入构建完成
-            * **应用名称**: ${{ github.event.inputs.app_name }}
-            * **补丁核心**: Elaina Libs
+            <details>
+              <summary>中文安装说明 - 点击展开</summary>
+                1. 在下方列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 7z.00* 结尾的文件</br>
+                2. 解压时只需要选择"XXX.7z.001"解压即可</br>
+                3. 在解压后的文件夹中找到apk文件并安装
+            </details>
             
             <details>
-              <summary>安装说明 (点击展开)</summary>
-                1. 下载所有以 7z.00* 结尾的分卷文件。<br>
-                2. 将它们放在同一目录下，使用解压软件解压 `7z.001` 文件即可。<br>
-                3. 安装解压出的 APK 或 XAPK 文件。
+              <summary>English Installation Instructions - Click to expand</summary>
+                1. Find the version prefix you need in the list below, and download all files ending with 7z.00* that have that server name prefix</br>
+                2. When extracting, simply select the "XXX.7z.001" file to decompress</br>
+                3. Find the APK file in the extracted folder and install it
             </details>

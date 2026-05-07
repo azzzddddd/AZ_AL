@@ -1,4 +1,4 @@
-name: XAPK AzurLane Elaina Build Work
+name: XAPK AzurLane JMBQ Build Work
 
 on:
   workflow_dispatch:
@@ -39,21 +39,25 @@ jobs:
         run: |
           chmod +x merge_build.sh
           ./merge_build.sh "${{ github.event.inputs.region }}"
+
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
-          tag: "${{ github.event.inputs.region }}-Elaina-Patched"
-          name: "AzurLane Elaina Patched XAPK - ${{ github.event.inputs.region }}"
-          artifacts: "${{ github.event.inputs.region }}-Elaina.7z.*"
+          tag: "${{ env.JMBQ_VERSION }}-XAPK"
+          name: "AzurLane JMBQ ${{ env.JMBQ_VERSION }} Build XAPK"
+          artifacts: "${{ github.event.inputs.region }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           body: |
-            ### Elaina XAPK 自动注入构建完成
-            * **区服**: ${{ github.event.inputs.region }}
-            * **补丁核心**: Elaina Libs
+            <details>
+              <summary>中文安装说明 - 点击展开</summary>
+                1. 在下方列表中找到你需要的版本前缀，下载该服务器名称前缀的所有以 7z.00* 结尾的文件</br>
+                2. 解压时只需要选择"XXX.7z.001"解压即可</br>
+                3. 在解压后的文件夹中找到xapk文件并安装，安装方法请自行查询相关教程
+            </details>
             
             <details>
-              <summary>安装说明 (点击展开)</summary>
-                1. 下载所有以 `7z.00*` 结尾的分卷文件。<br>
-                2. 将它们放在同一目录下，使用解压软件解压 `7z.001` 文件即可得到 `.xapk`。<br>
-                3. 使用支持 XAPK 的安装器进行安装。
+              <summary>English Installation Instructions - Click to expand</summary>
+                1. Find the version prefix you need in the list below, and download all files ending with 7z.00* that have that server name prefix</br>
+                2. When extracting, simply select the "XXX.7z.001" file to decompress</br>
+                3. Find the XAPK file in the extracted folder and install it, please refer to the relevant tutorials for installation methods
             </details>
