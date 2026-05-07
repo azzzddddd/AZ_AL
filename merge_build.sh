@@ -1,56 +1,216 @@
+#!/bin/bash
+# 合并后的构建脚本，支持APK和XAPK格式
+# 公共变量参数 部分从Github Action中传入
 BUILD_TOOLS_DIR=$(find ${ANDROID_HOME}/build-tools -maxdepth 1 -type d | sort -V | tail -n 1)
 AAPT_PATH="${BUILD_TOOLS_DIR}/aapt"
 DOWNLOAD_DIR="."
-APP_NAME=$1
-DOWNLOAD_URL=$2
+GAME_SERVER=$1
+APK_URL=$2
+BUILD_TYPE="APK" # 默认构建类型
 
-# 检查参数并判断后缀
-if [ -z "${APP_NAME}" ] || [ -z "${DOWNLOAD_URL}" ]; then
-    echo "❌ 参数缺失"
-    exit 1
-fi
+# 检查参数
+CHECK_PARAM() {
+    if [ -z "${GAME_SERVER}" ]; then
+        echo "服务器名称不能为空"
+        exit 1
+    fi
 
-if [[ "${DOWNLOAD_URL}" == *".xapk"* ]]; then
-    BUILD_TYPE="XAPK"
-else
-    BUILD_TYPE="APK"
-fi
+    if ! echo "${GAME_SERVER}" | grep -q "^[a-zA-Z0-9]*$"; then
+        echo "服务器参数包含非英文数字字符,请重新输入"
+        exit 1
+    fi
 
-echo "🚀 开始构建: ${APP_NAME} | 模式: ${BUILD_TYPE}"
-
-# 下载 Apktool
-DOWNLOAD_APKTOOL() {
-    echo "📦 正在下载 Apktool..."
-    curl -L -o "apktool.jar" "https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar"
+    # 检测是否需要使用XAPK构建模式
+    # 对于国际服务器（EN、JP、KR）和TW服务器，使用XAPK模式
+    # 这些服务器通常通过apkeep直接下载，不需要APK_URL参数
+    case "${GAME_SERVER}" in
+        "TW" | "EN" | "JP" | "KR")
+            BUILD_TYPE="XAPK"
+            echo "检测到需要使用XAPK构建模式: ${GAME_SERVER}"
+            ;;
+        *)
+            # 其他服务器需要提供APK下载链接
+            if [ -z "${APK_URL}" ]; then
+                echo "APK下载链接不能为空"
+                exit 1
+            fi
+            BUILD_TYPE="APK"
+            echo "使用标准APK构建模式: ${GAME_SERVER}"
+            ;;
+    esac
 }
 
-# 下载目标文件
-DOWNLOAD_TARGET() {
-    echo "📥 正在下载目标文件..."
-    curl -L -o "target_dl_file" "${DOWNLOAD_URL}"
-    
-    if [ "${BUILD_TYPE}" = "XAPK" ]; then
-        echo "📂 解压 XAPK..."
-        unzip -o "target_dl_file" -d "xapk_temp"
-        MAIN_APK=$(find xapk_temp -name "*.apk" | head -n 1)
-        cp "${MAIN_APK}" "target.apk"
+# 设置包名和文件名（XAPK模式使用）
+SET_BUNDLE_ID() {
+    case "$GAME_SERVER" in
+        "TW")
+            GAME_BUNDLE_ID="com.hkmanjuu.azurlane.gp"
+            ;;
+        "EN")
+            GAME_BUNDLE_ID="com.YoStarEN.AzurLane"
+            ;;
+        "JP")
+            GAME_BUNDLE_ID="com.YoStarJP.AzurLane"
+            ;;
+        "KR")
+            GAME_BUNDLE_ID="kr.txwy.and.blhx"
+            ;;
+    esac
+    APK_FILENAME="${GAME_BUNDLE_ID}.apk"
+    echo "已设置包名为: ${GAME_BUNDLE_ID}"
+}
+
+# 下载apkeep（XAPK模式使用）
+DOWNLOAD_APKEEP() {
+    local OWNER="EFForg"
+    local REPO="apkeep"
+    local LIB_PLATFORM="x86_64-unknown-linux-gnu"
+    local FILENAME="apkeep"
+
+    echo "正在下载apkeep工具..."
+    local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
+    local DOWNLOAD_LINK=$(echo "${API_RESPONSE}" | jq -r ".assets[] | select(.name | contains(\"${LIB_PLATFORM}\")) | .browser_download_url" | head -n 1)
+    if [ -z "${DOWNLOAD_LINK}" ] || [ "${DOWNLOAD_LINK}" == "null" ]; then
+        echo "无法找到Apkeep下载链接"
+        exit 1
+    fi
+
+    curl -L -o "${DOWNLOAD_DIR}/${FILENAME}" "${DOWNLOAD_LINK}"
+    if [ $? -eq 0 ]; then
+        echo "Apkeep下载成功！文件保存至：${DOWNLOAD_DIR}/${FILENAME}"
+        chmod +x "${DOWNLOAD_DIR}/${FILENAME}"
     else
-        mv "target_dl_file" "target.apk"
+        echo "Apkeep下载失败，请重试"
+        exit 1
     fi
 }
 
-# 反编译 APK
+# 下载ApkTool
+DOWNLOAD_APKTOOL() {
+    local OWNER="iBotPeaches"
+    local REPO="Apktool"
+    local FILENAME="apktool.jar"
+
+    echo "正在下载Apktool..."
+    # 新增判断：修复TW在新版Apktool反编译 Androidmanifest.xml 时报错
+    if [ "${GAME_SERVER}" == "TW" ]; then
+    API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/v2.12.1"
+    else
+    API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
+    fi
+    
+    local API_RESPONSE=$(curl -s "${API_URL}")
+    local DOWNLOAD_LINK=$(echo "${API_RESPONSE}" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
+    if [ -z "${DOWNLOAD_LINK}" ] || [ "${DOWNLOAD_LINK}" == "null" ]; then
+        echo "无法找到Apktool下载链接"
+        exit 1
+    fi
+
+    curl -L -o "${DOWNLOAD_DIR}/${FILENAME}" "${DOWNLOAD_LINK}"
+    if [ $? -eq 0 ]; then
+        echo "Apktool下载成功！文件保存至：${DOWNLOAD_DIR}/${FILENAME}"
+    else
+        echo "Apktool下载失败，请重试"
+        exit 1
+    fi
+}
+# 下载APK（通用函数，根据构建类型执行不同的下载逻辑）
+DOWNLOAD_APK() {
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        # XAPK模式下载逻辑
+        echo "正在使用apkeep下载XAPK..."
+        "${DOWNLOAD_DIR}/apkeep" -a "${GAME_BUNDLE_ID}" "${DOWNLOAD_DIR}/"
+        if [ $? -ne 0 ]; then
+            echo "XAPK 下载失败！"
+            exit 1
+        fi
+        echo "XAPK [${GAME_BUNDLE_ID}.xapk] 下载成功！"
+
+        echo "当前目录内文件列表:"
+        ls -la "${DOWNLOAD_DIR}"
+        
+        echo "正在从 XAPK 中提取文件..."
+        unzip -o "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk" -d "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}"
+        if [ $? -ne 0 ]; then
+            echo "错误: 解压失败！"
+            exit 1
+        fi
+        mv "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}/${GAME_BUNDLE_ID}.apk" "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        # 普通APK模式下载逻辑
+        APK_FILENAME="${GAME_SERVER}.apk"
+        echo "正在下载APK..."
+        curl -L -o "${DOWNLOAD_DIR}/${APK_FILENAME}" "${APK_URL}"
+        if [ $? -ne 0 ]; then
+            echo "APK下载失败"
+            exit 1
+        fi
+        echo "APK [${APK_FILENAME}] 下载完成"
+    fi
+}
+
+# 删除原始XAPK（XAPK模式使用）
+DELETE_ORGINAL_XAPK() {
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        echo "删除原始XAPK文件..."
+        rm -rf "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk"
+    fi
+}
+
+# 验证APK
+VERIFY_APK() {
+    local APK_TO_VERIFY
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        APK_TO_VERIFY="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        APK_TO_VERIFY="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    echo "正在验证APK: ${APK_TO_VERIFY}"
+    [ ! -f "${APK_TO_VERIFY}" ] && { echo "APK文件未找到"; exit 1; }
+    
+    local FILE_SIZE=$(stat -f%z "${APK_TO_VERIFY}" 2>/dev/null || stat -c%s "${APK_TO_VERIFY}" 2>/dev/null)
+    [ "${FILE_SIZE}" -lt 1024 ] && { echo "APK文件大小异常"; exit 1; }
+    unzip -t "${APK_TO_VERIFY}" >/dev/null 2>&1 || { echo "APK文件损坏"; exit 1; }
+    echo "APK验证通过"
+}
+
+# APK 解包
 DECODE_APK() {
-    echo "🔓 正在反编译 APK..."
-    java -jar apktool.jar d -f target.apk -o DECODE_Output
-    if [ $? -ne 0 ]; then echo "❌ 反编译失败"; exit 1; fi
+    local APK_TO_DECODE
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        APK_TO_DECODE="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        APK_TO_DECODE="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    echo "APK反编译: ${APK_TO_DECODE}"
+    java -jar "${DOWNLOAD_DIR}/apktool.jar" d -f "${APK_TO_DECODE}" -o "${DOWNLOAD_DIR}/DECODE_Output"
+    if [ $? -ne 0 ]; then
+        echo "错误: APK 反编译失败！"
+        exit 1
+    fi
+    echo "反编译完成。"
+}
+
+# 删除源APK
+DELETE_ORGINAL_APK() {
+    local APK_TO_DELETE
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        APK_TO_DELETE="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        APK_TO_DELETE="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    echo "删除原始APK文件..."
+    rm -rf "${APK_TO_DELETE}"
 }
 
 # 注入 Elaina 核心库和修改 smali 代码
 PATCH_APK() {
     echo "💉 开始注入 Elaina 补丁..."
     
-    # 1. 复制 .so 动态库到 lib 目录 (你的仓库根目录必须有一个 libs 文件夹存放这些库)
+    # 1. 复制 .so 动态库到 lib 目录
     if [ -d "libs" ]; then
         echo "   复制 .so 依赖库..."
         mkdir -p DECODE_Output/lib
@@ -68,7 +228,7 @@ PATCH_APK() {
     fi
     echo "   找到目标文件: ${SMALI_FILE}"
 
-    # 3. 使用 sed 注入代码 (完美还原 Python 脚本的注入逻辑)
+    # 3. 使用 sed 注入代码 
     # 注入 native 声明
     sed -i '/# direct methods/a \
 .method private static native init(Landroid/content/Context;)V\n.end method\n' "$SMALI_FILE"
@@ -82,47 +242,295 @@ PATCH_APK() {
     echo "✅ Smali 代码注入完成！"
 }
 
-# 回编译 APK
+# 打包APK
 BUILD_APK() {
-    echo "📦 正在重新打包 APK..."
-    java -jar apktool.jar b -f DECODE_Output -o patched_unsigned.apk
-    if [ $? -ne 0 ]; then echo "❌ 打包失败"; exit 1; fi
-}
-
-# 对齐与签名
-OPTIMIZE_AND_SIGN() {
-    export PATH=${PATH}:${BUILD_TOOLS_DIR}
-    
-    echo "✨ 正在对齐 (zipalign)..."
-    zipalign -f 4 patched_unsigned.apk patched_aligned.apk
-    
-    echo "✍️ 正在签名 (apksigner)..."
-    # 注意：你需要将 testkey.pk8 和 testkey.x509.pem 放在仓库的 signing/ 目录下
-    apksigner sign --key signing/testkey.pk8 --cert signing/testkey.x509.pem --out "patched_final.apk" patched_aligned.apk
-}
-
-# 封装与分卷压缩
-FINALIZE() {
+    local OUTPUT_APK
     if [ "${BUILD_TYPE}" = "XAPK" ]; then
-        echo "📦 重新打包为 XAPK..."
-        cp "patched_final.apk" "${MAIN_APK}"
-        cd xapk_temp && zip -r "../${APP_NAME}-Patched.xapk" * && cd ..
-        FINAL_FILE="${APP_NAME}-Patched.xapk"
+        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
     else
-        mv "patched_final.apk" "${APP_NAME}-Patched.apk"
-        FINAL_FILE="${APP_NAME}-Patched.apk"
+        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    echo "正在重新构建已打补丁的 APK 文件: ${OUTPUT_APK}"
+    java -jar "${DOWNLOAD_DIR}/apktool.jar" b -f "${DOWNLOAD_DIR}/DECODE_Output" -o "${OUTPUT_APK}"
+    if [ $? -ne 0 ]; then
+        echo "错误: APK 构建失败！"
+        exit 1
+    fi
+    echo "APK 构建成功"
+}
+
+# 优化并签名APK
+OPTIMIZE_AND_SIGN_APK() {
+    export PATH=${PATH}:${BUILD_TOOLS_DIR}
+    local KEY_DIR="${DOWNLOAD_DIR}/key/"
+    local PRIVATE_KEY="${KEY_DIR}testkey.pk8"
+    local CERTIFICATE="${KEY_DIR}testkey.x509.pem"
+    local INPUT_APK
+    local UNSIGNED_APK
+    local FINAL_APK
+    
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        INPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+        UNSIGNED_APK="${GAME_BUNDLE_ID}.unsigned.apk"
+    else
+        INPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+        UNSIGNED_APK="${GAME_SERVER}.unsigned.apk"
+    fi
+    
+    local OUTPUT_APK="${DOWNLOAD_DIR}/${UNSIGNED_APK}"
+    local FINAL_APK="${INPUT_APK}"
+
+    if [ ! -f "${INPUT_APK}" ]; then
+        echo "错误：找不到输入APK文件: ${INPUT_APK}"
+        exit 1
     fi
 
-    echo "🗜️ 正在生成 7z 分卷压缩包..."
-    7z a -v800M "${APP_NAME}-Patched.7z" "${FINAL_FILE}"
-    echo "🎉 全部完成！"
+    if [ ! -f "${PRIVATE_KEY}" ] || [ ! -f "${CERTIFICATE}" ]; then
+        echo "错误：找不到签名密钥文件"
+        echo "请确保以下文件存在："
+        echo "  - ${PRIVATE_KEY}"
+        echo "  - ${CERTIFICATE}"
+        exit 1
+    else
+        echo "已找到签名密钥："
+        echo "  - ${PRIVATE_KEY}"
+        echo "  - ${CERTIFICATE}"
+    fi
+
+    echo "正在优化APK..."
+    if zipalign -f 4 "${INPUT_APK}" "${OUTPUT_APK}"; then
+        echo "优化成功"
+        rm "${INPUT_APK}"
+
+        echo "正在签名APK..."
+        if apksigner sign --key "${PRIVATE_KEY}" --cert "${CERTIFICATE}" "${OUTPUT_APK}"; then
+            echo "签名成功"
+            mv "${OUTPUT_APK}" "${FINAL_APK}"
+        else
+            echo "签名失败"
+            exit 1
+        fi
+    else
+        echo "优化失败"
+        exit 1
+    fi
 }
 
-# 执行流程
-DOWNLOAD_APKTOOL
-DOWNLOAD_TARGET
-DECODE_APK
-PATCH_APK
-BUILD_APK
-OPTIMIZE_AND_SIGN
-FINALIZE
+# 打包APK
+BUILD_APK() {
+    local OUTPUT_APK
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        OUTPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    echo "正在重新构建已打补丁的 APK 文件: ${OUTPUT_APK}"
+    java -jar "${DOWNLOAD_DIR}/apktool.jar" b -f "${DOWNLOAD_DIR}/DECODE_Output" -o "${OUTPUT_APK}"
+    if [ $? -ne 0 ]; then
+        echo "错误: APK 构建失败！"
+        exit 1
+    fi
+    echo "APK 构建成功"
+}
+
+# 优化并签名APK
+OPTIMIZE_AND_SIGN_APK() {
+    export PATH=${PATH}:${BUILD_TOOLS_DIR}
+    local KEY_DIR="${DOWNLOAD_DIR}/key/"
+    local PRIVATE_KEY="${KEY_DIR}testkey.pk8"
+    local CERTIFICATE="${KEY_DIR}testkey.x509.pem"
+    local INPUT_APK
+    local UNSIGNED_APK
+    local FINAL_APK
+    
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        INPUT_APK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+        UNSIGNED_APK="${GAME_BUNDLE_ID}.unsigned.apk"
+    else
+        INPUT_APK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+        UNSIGNED_APK="${GAME_SERVER}.unsigned.apk"
+    fi
+    
+    local OUTPUT_APK="${DOWNLOAD_DIR}/${UNSIGNED_APK}"
+    local FINAL_APK="${INPUT_APK}"
+
+    if [ ! -f "${INPUT_APK}" ]; then
+        echo "错误：找不到输入APK文件: ${INPUT_APK}"
+        exit 1
+    fi
+
+    if [ ! -f "${PRIVATE_KEY}" ] || [ ! -f "${CERTIFICATE}" ]; then
+        echo "错误：找不到签名密钥文件"
+        echo "请确保以下文件存在："
+        echo "  - ${PRIVATE_KEY}"
+        echo "  - ${CERTIFICATE}"
+        exit 1
+    else
+        echo "已找到签名密钥："
+        echo "  - ${PRIVATE_KEY}"
+        echo "  - ${CERTIFICATE}"
+    fi
+
+    echo "正在优化APK..."
+    if zipalign -f 4 "${INPUT_APK}" "${OUTPUT_APK}"; then
+        echo "优化成功"
+        rm "${INPUT_APK}"
+
+        echo "正在签名APK..."
+        if apksigner sign --key "${PRIVATE_KEY}" --cert "${CERTIFICATE}" "${OUTPUT_APK}"; then
+            echo "签名成功"
+            mv "${OUTPUT_APK}" "${FINAL_APK}"
+        else
+            echo "签名失败"
+            exit 1
+        fi
+    else
+        echo "优化失败"
+        exit 1
+    fi
+}
+
+# 获取并传回游戏版本
+GET_GAME_VERSION() {
+    local APK_TO_CHECK
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        APK_TO_CHECK="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk"
+    else
+        APK_TO_CHECK="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+    fi
+    
+    if [ -f "${APK_TO_CHECK}" ]; then
+        if [ -f "${AAPT_PATH}" ]; then
+            GAME_VERSION=$("${AAPT_PATH}" dump badging "${APK_TO_CHECK}" | grep "versionName" | sed "s/.*versionName='\([^']*\)'.*/\1/" | head -1)
+            if [ -z "${GAME_VERSION}" ] || [ "${GAME_VERSION}" = "''" ]; then
+                GAME_VERSION="未知"
+                echo "警告：无法从APK提取版本信息"
+            fi
+        else
+            echo "错误：找不到aapt工具: ${AAPT_PATH}"
+        fi
+    else
+        echo "错误：APK文件不存在: ${APK_TO_CHECK}"
+    fi
+    echo "VERSION=${GAME_VERSION}" >> "${GITHUB_ENV}"
+    echo "游戏版本: ${GAME_VERSION}"
+}
+
+# 重命名APK（APK模式使用）
+RENAME_APK() {
+    if [ "${BUILD_TYPE}" = "APK" ] && [ -f "${DOWNLOAD_DIR}/${GAME_SERVER}.apk" ]; then
+        if [ -f "${AAPT_PATH}" ]; then
+            PACKAGE_NAME=$("${AAPT_PATH}" dump badging "${DOWNLOAD_DIR}/${GAME_SERVER}.apk" | grep "package: name=" | cut -d"'" -f2 | head -1)
+            if [ -z "${PACKAGE_NAME}" ] || [ "${PACKAGE_NAME}" = "''" ]; then
+                PACKAGE_NAME="${GAME_SERVER}"
+                echo "警告：无法从APK提取包名，使用服务器名称作为包名"
+            fi
+            mv "${DOWNLOAD_DIR}/${GAME_SERVER}.apk" "${DOWNLOAD_DIR}/${PACKAGE_NAME}.apk"
+            echo "重命名成功 [${PACKAGE_NAME}.apk]"
+        else
+            echo "错误：找不到aapt工具: ${AAPT_PATH}"
+        fi
+    fi
+}
+
+# 移动修改后的APK到源目录并重新打包XAPK（XAPK模式使用）
+REPACK_XAPK() {
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        echo "正在重新打包XAPK..."
+        mkdir -p "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}"
+        mv -f "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.apk" "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}/${GAME_BUNDLE_ID}.apk"
+        cd "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}" && zip -r "${GAME_BUNDLE_ID}.xapk" *
+        cd - > /dev/null
+        mv "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}/${GAME_BUNDLE_ID}.xapk" "${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk"
+        echo "XAPK重新打包完成"
+    fi
+}
+
+# 生成7z分卷压缩包
+CREATE_SPLIT_ARCHIVES() {
+    local FINAL_FILE
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        FINAL_FILE="${DOWNLOAD_DIR}/${GAME_BUNDLE_ID}.xapk"
+    else
+        if [ -f "${DOWNLOAD_DIR}/${PACKAGE_NAME}.apk" ]; then
+            FINAL_FILE="${DOWNLOAD_DIR}/${PACKAGE_NAME}.apk"
+        else
+            FINAL_FILE="${DOWNLOAD_DIR}/${GAME_SERVER}.apk"
+        fi
+    fi
+    
+    if [ ! -f "${FINAL_FILE}" ]; then
+        echo "错误: 最终文件未找到: ${FINAL_FILE}"
+        exit 1
+    fi
+    echo "正在压缩 ${FINAL_FILE}"
+    7z a -v800M "${GAME_SERVER}-V.${GAME_VERSION}.7z" "${FINAL_FILE}" || {
+        echo "错误: 7z 压缩失败！"
+        exit 1
+    }
+    echo "分卷压缩完成: ${GAME_SERVER}-V.${GAME_VERSION}.7z"
+}
+
+# 打印Logo
+PRINT_LOGO() {
+    cat << "EOF"
+
+ ________  ________  ___  ___  ________  ___       ________  ________   _______              ___  _____ ______   ________  ________      
+|\   __  \|\_____  \|\  \|\  \|\   __  \|\  \     |\   __  \|\   ___  \|\  ___ \            |\  \|\   _ \  _   \|\   __  \|\   __  \     
+\ \  \|\  \\___/  /\ \  \\  \ \  \|\  \ \  \    \ \  \|\  \ \  \\ \  \ \   __/|           \ \  \ \  \\__\ \  \ \  \|\ /\ \  \|\  \    
+ \ \   __  \   /  / /\ \  \\  \ \   _  _\ \  \    \ \   __  \ \  \\ \  \ \  \_|/__       __ \ \  \ \  \\|__| \  \ \   __  \ \  \\  \\  
+  \ \  \ \  \ /  /_/__\ \  \\  \ \  \\  \\ \  \____\ \  \ \  \ \  \\ \  \ \  \_|\ \     |\  \\\_\  \ \  \    \ \  \ \  \|\  \ \  \\  \\  
+   \ \__\ \__\\________\ \_______\ \__\\ _\\ \_______\ \__\ \__\ \__\\ \__\ \_______\    \ \________\ \__\    \ \__\ \_______\ \_____  \ 
+    \|__|\|__\|\|_______|\|_______|\|__|\|__\|_______|\|__|\|__|\|__| \|__\|_______|     \|________|\|__|     \|__\|_______|\|___| \__\
+                                                                                                                                    \|__|
+                                                                                                                                         
+                                                                                                                                                                                                 
+EOF
+}
+
+# 主执行函数
+main() {
+    PRINT_LOGO
+    CHECK_PARAM
+    
+# 根据构建类型执行不同的流程
+    if [ "${BUILD_TYPE}" = "XAPK" ]; then
+        # XAPK构建流程
+        SET_BUNDLE_ID
+        DOWNLOAD_APKEEP
+        DOWNLOAD_APKTOOL
+        DOWNLOAD_MOD_MENU
+        DOWNLOAD_APK
+        DELETE_ORGINAL_XAPK
+        VERIFY_APK
+        DECODE_APK
+        DELETE_ORGINAL_APK
+        PATCH_APK
+        BUILD_APK
+        OPTIMIZE_AND_SIGN_APK
+        GET_GAME_VERSION
+        REPACK_XAPK
+    else
+        # APK构建流程
+        DOWNLOAD_APKTOOL
+        DOWNLOAD_MOD_MENU
+        DOWNLOAD_APK
+        VERIFY_APK
+        DECODE_APK
+        DELETE_ORGINAL_APK
+        PATCH_APK
+        BUILD_APK
+        OPTIMIZE_AND_SIGN_APK
+        GET_GAME_VERSION
+        RENAME_APK
+    fi
+    
+    # 共同的后续步骤
+    CREATE_SPLIT_ARCHIVES
+    echo "构建完成！构建类型: ${BUILD_TYPE}"
+}
+
+# 执行主函数
+main
