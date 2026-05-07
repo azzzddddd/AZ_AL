@@ -406,6 +406,7 @@ PATCH_VERSIONS() {
     local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
     local ELAINA_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
 }
+
 # 打印Logo
 PRINT_LOGO() {
     cat << "EOF"
