@@ -408,7 +408,7 @@ PATCH_VERSIONS() {
     local GET_VERSION=$(echo "${API_RESPONSE}" | jq -r '.tag_name')
     
     echo "ELAINA_VERSION=${GET_VERSION}" >> "${GITHUB_ENV}"
-    echo "成功获取补丁版本: ${GET_VERSION}
+    echo "成功获取补丁版本: ${GET_VERSION}"
 }
 
 # 打印Logo
