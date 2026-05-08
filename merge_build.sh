@@ -91,15 +91,8 @@ DOWNLOAD_APKTOOL() {
     local REPO="Apktool"
     local FILENAME="apktool.jar"
 
-    echo "正在下载Apktool..."
-    # 新增判断：修复TW在新版Apktool反编译 Androidmanifest.xml 时报错
-    if [ "${GAME_SERVER}" == "TW" ]; then
-    API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/tags/v2.12.1"
-    else
-    API_URL="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
-    fi
-    
-    local API_RESPONSE=$(curl -s "${API_URL}")
+    echo "正在下载Apktool..."   
+    local API_RESPONSE=$(curl -s "https://api.github.com/repos/${OWNER}/${REPO}/releases/latest")
     local DOWNLOAD_LINK=$(echo "${API_RESPONSE}" | jq -r '.assets[] | select(.name | endswith(".jar")) | .browser_download_url' | head -n 1)
     if [ -z "${DOWNLOAD_LINK}" ] || [ "${DOWNLOAD_LINK}" == "null" ]; then
         echo "无法找到Apktool下载链接"
