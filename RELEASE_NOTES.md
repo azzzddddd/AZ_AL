@@ -19,3 +19,7 @@
 ### 📝 更新日志 / Changelog
 - **[新增]** “文件提供器”（File Provider），方便免 Root 用户修改文件。
 - **[New]** Added "File Provider", making it easier for non-root users to modify files.
+
+### 🪄使用方法
+- [注入文件提供器](https://mt2.cn/guide/reverse/inject-documents-provider.html#%E6%B7%BB%E5%8A%A0%E6%9C%AC%E5%9C%B0%E5%AD%98%E5%82%A8)
+- [Data Files Provider](https://mt2.cn/guide/reverse/inject-documents-provider.html#%E6%B7%BB%E5%8A%A0%E6%9C%AC%E5%9C%B0%E5%AD%98%E5%82%A8)
