@@ -63,4 +63,5 @@ jobs:
           tag: "${{ env.ELAINA_VERSION }}-APK"
           name: "AzurLane Elaina ${{ env.ELAINA_VERSION }} Build APK"
           artifacts: "${{ github.event.inputs.server_name }}.7z.*"
+          allowUpdates: true
           bodyFile: "current_release.md"
