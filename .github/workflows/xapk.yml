@@ -55,4 +55,5 @@ jobs:
           tag: "${{ env.ELAINA_VERSION }}-XAPK"
           name: "AzurLane Elaina ${{ env.ELAINA_VERSION }} Build XAPK"
           artifacts: "${{ github.event.inputs.region }}-V.${{ env.VERSION }}.7z.*"
+          allowUpdates: true
           bodyFile: "current_release.md"
