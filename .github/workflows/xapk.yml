@@ -46,8 +46,6 @@ jobs:
           
           echo "" >> current_release.md
           echo "### 📦 Build Details" >> current_release.md
-          echo "- Game Version: \`${{ env.VERSION }}\`" >> current_release.md
-          echo "- Elaina Patch Version: \`${{ env.ELAINA_VERSION }}\`" >> current_release.md
 
       - name: Release and Upload Assets
         uses: ncipollo/release-action@v1
