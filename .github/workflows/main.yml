@@ -59,7 +59,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: "${{ env.ELAINA_VERSION }}-APK"
-          name: "AzurLane Elaina ${{ env.ELAINA_VERSION }}-V.${{ env.VERSION }} Build APK"
-          artifacts: "${{ github.event.inputs.server_name }}.7z.*"
+          name: "AzurLane Elaina ${{ env.ELAINA_VERSION }} Build APK"
+          artifacts: "${{ github.event.inputs.server_name }}-V.${{ env.VERSION }}.7z.*"
           allowUpdates: true
           bodyFile: "current_release.md"
