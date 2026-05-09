@@ -15,3 +15,7 @@
 3. Find the installation package in the extracted folder and install it (please refer to relevant tutorials for installation methods).
 
 </details>
+
+### 📝 更新日志 / Changelog
+- **[新增]** “文件提供器”（File Provider），方便免 Root 用户修改文件。
+- **[New]** Added "File Provider", making it easier for non-root users to modify files.
